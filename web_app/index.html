@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar y Redimensionar Imagen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        #preview, #resized {
+            margin-top: 20px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cargar y Redimensionar Imagen</h1>
+    <form>
+        <input type="file" id="fileInput" accept="image/*">
+    </form>
+    <div id="preview">
+        <p>No se ha cargado ninguna imagen.</p>
+    </div>
+    <div id="resized">
+        <p>No se ha redimensionado ninguna imagen.</p>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('preview');
+            const resized = document.getElementById('resized');
+            preview.innerHTML = ''; // Clear previous content
+            resized.innerHTML = ''; // Clear previous content
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    preview.appendChild(img);
+
+                    img.onload = async function() {
+                        // Resize the image
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const size = {width: 128, height: 128}; // Desired size
+
+                        canvas.width = size.width;
+                        canvas.height = size.height;
+                        ctx.drawImage(img, 0, 0, size.width, size.height);
+
+                        const resizedImg = document.createElement('img');
+                        resizedImg.src = canvas.toDataURL();
+                        resized.appendChild(resizedImg);
+
+                        // Prepare the image for prediction
+                        const imgTensor = tf.browser.fromPixels(resizedImg);
+
+                        // Preprocesar la imagen (redimensionar y normalizar los valores de los píxeles)
+                        const arr = tf.image.resizeBilinear(imgTensor, [128, 128]).div(255);                        
+                        console.log("Tensor listo...");
+
+
+                        //*******
+                        arr = [arr]; //Meter el arreglo en otro arreglo por que si no tio tensorflow se enoja >:(
+                        //Nah basicamente Debe estar en un arreglo nuevo en el indice 0, por ser un tensor4d en forma 1, 28, 28, 1
+                        var tensor4 = tf.tensor4d(arr);
+                        var resultados = modelo.predict(tensor4).dataSync();
+                        var mayorIndice = resultados.indexOf(Math.max.apply(null, resultados));
+                        
+                        console.log("Prediccion", mayorIndice);
+                        document.getElementById("resultado").innerHTML = mayorIndice;
+
+                    }
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '<p>No se ha cargado ninguna imagen.</p>';
+                resized.innerHTML = '<p>No se ha redimensionado ninguna imagen.</p>';
+            }
+        });
+    </script>
+
+    <!-- Incluir TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+    <script type="text/javascript">
+
+      var modelo = null;
+
+        //Cargar modelo
+        (async () => {
+            console.log("Cargando modelo...");
+            modelo = await tf.loadLayersModel("model.json");
+            console.log("Modelo cargado...");
+        })();
+
+
+
+    </script>
+
+</body>
+</html>
