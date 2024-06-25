@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificación de espectogramas</title>
+    <style>
+        img, canvas {
+            max-width: 100%;
+            height: auto;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clasificación de espectogramas</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <br><br>
+    <img id="imagePreview" src="#" alt="Vista previa de la imagen">
+    <br><br>
+    <canvas id="croppedCanvas"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+    <script>
+        //Set the crop box for the image
+        const cropBox = { x: 55, y: 18, width: 1222 - 55, height: 620 - 18 };               
+        let model;
+
+    // Cargar modelo
+    (async () => {
+        try {
+            console.log("Cargando modelo...");
+            const modelo = await tf.loadLayersModel("model/model.json");
+            console.log("Modelo cargado con éxito.");
+        } catch (error) {
+            console.error("Error al cargar el modelo:", error);
+        }
+    })();
+
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('imagePreview');
+                    img.src = e.target.result;
+                    //img.style.display = 'block';              //<------------------------ Don't display the loaded image
+
+                    img.onload = function() {
+                        const canvas = document.getElementById('croppedCanvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Set canvas dimensions to crop box size
+                        canvas.width = cropBox.width;
+                        canvas.height = cropBox.height;
+
+                        // Draw the cropped image onto the canvas
+                        ctx.drawImage(
+                            img,
+                            cropBox.x, cropBox.y, cropBox.width, cropBox.height,  // Source rectangle
+                            0, 0, cropBox.width, cropBox.height  // Destination rectangle
+                        );
+
+                        canvas.style.display = 'block';
+
+                        // Convert the cropped image to a tensor
+                        try{
+                            convertCanvasToTensor(canvas);
+                            console.log("The image was converted in a Tensor succesfully")
+                        }catch(error) {
+                            console.log("Error: the image wasn't converted in a Tensor")
+                        }
+                    };
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        //Process the image before to be predicted:
+        function convertCanvasToTensor(canvas) {
+            try{
+                // Get image data from canvas
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                // Create a tensor from the image data
+                const imageTensor = tf.browser.fromPixels(imageData);
+
+                // Resize the tensor to (128, 128)
+                const resizedImage = tf.image.resizeBilinear(imageTensor, [128, 128]);
+
+                // Normalize the pixel values to [0, 1]
+                const normalizedImage = resizedImage.div(tf.scalar(255.0));
+
+                // Add a batch dimension
+                const test_image = normalizedImage.expandDims(0);
+                console.log(test_image);
+            }catch(error){
+                throw new Error("Failed to process image data to a Tensor.");
+            }
+        }
+    </script>
+</body>
+</html>
