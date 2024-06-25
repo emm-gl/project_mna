@@ -52,7 +52,7 @@ def process_image(uploaded_image):
     # Make prediction
     prediction = model.predict(input_img)
         #Give the result:
-    if(prediction > 0.5):
+    if(prediction < 0.5):
         result_str = "The image is NOK"
         print("The image is NOK")
     else:
