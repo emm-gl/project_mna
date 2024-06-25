@@ -1,4 +1,4 @@
-#Readme:
+Readme:
 
 
 Para ejecutar el código que proporcionaste, necesitarás instalar las siguientes librerías de Python:
@@ -10,4 +10,5 @@ Para ejecutar el código que proporcionaste, necesitarás instalar las siguiente
 *tensorflow
 
 Puedes instalarlas todas utilizando el siguiente comando en tu terminal o línea de comandos:
+
 pip install gradio opencv-python-headless numpy Pillow tensorflow
